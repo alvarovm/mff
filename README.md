@@ -15,13 +15,28 @@ Description of an M-FF.
 
 A bit of theory on M-FFs, with references to articles.
 
-## Install
+## Package Dependencies
 
-How to install the package, eventually we would like something like
+The following packages are required or recommended:
 
-```sh
-$ python setup.py install
-```
+- NumPy: Required.
+- SciPy: Required.
+
+
+## Installation
+
+To install from source, uncompress the source files and, from the directory containing `setup.py`, run the following command:
+    
+    python setup.py install
+
+Or, to build in place, run:
+    
+    python setup.py build_ext --inplace
+
+If you build in place, you will also need to add your eqtools folder to your PYTHONPATH shell variable:
+    
+    export PYTHONPATH=$PYTHONPATH:/path/to/where/you/put/
+    
 
 ## Usage
 
@@ -51,5 +66,6 @@ A simple example on how to use the package, with typical parameters.
 * A. Glielmo, C. Zeni, A. De Vita, *Efficient non-parametric n-body force fields from machine learning* (https://arxiv.org/abs/1801.04823)
 
 * C .Zeni, K. Rossi, A. Glielmo, N. Gaston, F. Baletto, A. De Vita *Building machine learning force fields for nanoclusters* (https://arxiv.org/abs/1802.01417)
+
 
 

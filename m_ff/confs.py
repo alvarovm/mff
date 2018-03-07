@@ -15,7 +15,6 @@ from ase.neighborlist import NeighborList
 import scipy.sparse as sp
 
 
-
 def get_confs_asap(atoms, r_cut):
     # https://wiki.fysik.dtu.dk/asap/Neighbor%20lists
 
@@ -25,8 +24,7 @@ def get_confs_asap(atoms, r_cut):
     for atom in atoms:
         inds, confs, ds = nl.get_neighbors(atom.index)
 
-        yield atomic_numbers[inds], confs, force
-
+        yield atomic_numbers[inds], confs
 
 
 class ListOfConfs(object):
@@ -89,7 +87,7 @@ class ConfsSingleForces(Configurations, SingleSpecies, Forces):
         self.forces = forces
 
     def __iter__(self):
-
+        return self
 
     @classmethod
     def from_atoms(cls, atoms, r_cut):
@@ -118,16 +116,13 @@ class ConfsSingleForces(Configurations, SingleSpecies, Forces):
         return cls(dist_matrix, forces)
 
 
-
 class RemappingSingle(Configurations, SingleSpecies):
 
     def __init__(self, atoms, r_cut):
         self.nl = FullNeighborList(r_cut, atoms=atoms, driftfactor=0.)
 
-
     def confs_for_1d(self):
         return None
-
 
 
 class Confs(object):

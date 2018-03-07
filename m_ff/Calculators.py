@@ -63,12 +63,15 @@ class RemappedTwoBodySingleSpecies(Calculator):
     # 'Default parameters'
     default_parameters = {}
 
-    def __init__(self, restart=None, ignore_bad_restart_file=False, label='abinit', atoms=None, **kwargs):
-        super().__init__(self, restart, ignore_bad_restart_file, label, atoms, **kwargs)
+    def __init__(self, r_cut, restart=None, ignore_bad_restart_file=False, label='remapped2bodysingle', atoms=None,
+                 **kwargs):
+        super().__init__(restart, ignore_bad_restart_file, label, atoms, **kwargs)
 
-        self.r_cut = None
+        self.r_cut = r_cut
+        self.nl = FullNeighborList(self.r_cut, atoms=atoms, driftfactor=0.)
 
-    def calculate(self, atoms=None, properties=['energy'], system_changes=all_changes):
+    def calculate(self, atoms=None, properties=['energy'],
+                  system_changes=all_changes):
         """Do the calculation.
 
         properties: list of str
@@ -97,14 +100,21 @@ class RemappedTwoBodySingleSpecies(Calculator):
         implementation to set the atoms attribute.
         """
 
-        positions = self.atoms.positions
-        numbers = self.atoms.numbers
-        cell = self.atoms.cell
+        # positions = self.atoms.positions
+        # numbers = self.atoms.numbers
+        # cell = self.atoms.cell
 
         if atoms is not None:
             self.atoms = atoms.copy()
 
-        self.results['forces'] = None
+        # self.results['forces'] = None
+        self.results = {'energy': 0.0,
+                        'forces': np.zeros((len(self.atoms), 3)),
+                        'stress': np.zeros(6),
+                        'dipole': np.zeros(3),
+                        'charges': np.zeros(len(self.atoms)),
+                        'magmom': 0.0,
+                        'magmoms': np.zeros(len(self.atoms))}
 
     def conf_iterator(self, atoms):
         # https://wiki.fysik.dtu.dk/asap/Neighbor%20lists
@@ -127,12 +137,11 @@ if __name__ == '__main__':
     # HNi: 4.5
     # C_a: 3.2
 
+    # parameters = {
+    #     'cutoff_radius': 3.2
+    # }
 
-    parameters = {
-        'cutoff_radius': 3.2
-    }
-
-    calc = RemappedTwoBodySingleSpecies(parameters=parameters)
+    calc = RemappedTwoBodySingleSpecies(r_cut=3.2)
 
     a0 = 3.93
     b0 = a0 / 2.0
@@ -152,4 +161,3 @@ if __name__ == '__main__':
         print('a : {0} , total energy : {1}'.format(
             a, bulk.get_potential_energy()))
 
-    calc.clean()
