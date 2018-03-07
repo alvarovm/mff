@@ -11,6 +11,48 @@ class SingleSpecies(Exception):
     pass
 
 
+class MinimalCalculator:
+    """ASE calculator.
+
+    A calculator should store a copy of the atoms object used for the
+    last calculation.  When one of the *get_potential_energy*,
+    *get_forces*, or *get_stress* methods is called, the calculator
+    should check if anything has changed since the last calculation
+    and only do the calculation if it's really needed.  Two sets of
+    atoms are considered identical if they have the same positions,
+    atomic numbers, unit cell and periodic boundary conditions."""
+
+    def get_potential_energy(self, atoms=None, force_consistent=False):
+        """Return total energy.
+
+        Both the energy extrapolated to zero Kelvin and the energy
+        consistent with the forces (the free energy) can be
+        returned."""
+        return 0.0
+
+    def get_forces(self, atoms):
+        """Return the forces."""
+        return np.zeros((len(atoms), 3))
+
+    def get_stress(self, atoms):
+        """Return the stress."""
+        return np.zeros(6)
+
+    def calculation_required(self, atoms, quantities):
+        """Check if a calculation is required.
+
+        Check if the quantities in the *quantities* list have already
+        been calculated for the atomic configuration *atoms*.  The
+        quantities can be one or more of: 'energy', 'forces', 'stress',
+        'charges' and 'magmoms'.
+
+        This method is used to check if a quantity is available without
+        further calculations.  For this reason, calculators should
+        react to unknown/unsupported quantities by returning True,
+        indicating that the quantity is *not* available."""
+        return False
+
+
 class RemappedTwoBodySingleSpecies(Calculator):
     """A remapped 2-body calculator for ase
     """
@@ -23,6 +65,8 @@ class RemappedTwoBodySingleSpecies(Calculator):
 
     def __init__(self, restart=None, ignore_bad_restart_file=False, label='abinit', atoms=None, **kwargs):
         super().__init__(self, restart, ignore_bad_restart_file, label, atoms, **kwargs)
+
+        self.r_cut = None
 
     def calculate(self, atoms=None, properties=['energy'], system_changes=all_changes):
         """Do the calculation.
@@ -62,13 +106,33 @@ class RemappedTwoBodySingleSpecies(Calculator):
 
         self.results['forces'] = None
 
+    def conf_iterator(self, atoms):
+        # https://wiki.fysik.dtu.dk/asap/Neighbor%20lists
+
+        atomic_numbers = atoms.get_array('numbers', copy=False)
+        nl = FullNeighborList(self.r_cut, atoms=atoms)
+
+        for atom in atoms:
+            inds, confs, ds = nl.get_neighbors(atom.index)
+
+            yield atomic_numbers[inds], confs
+
 
 if __name__ == '__main__':
     from ase import Atoms
 
-    parameters = {'cut_off': pair_style, 'pair_coeff': pair_coeff}
+    # Usual cutoff values:
+    # Fe_vac: 4.5
+    # BIP_300: 100 (practically inf)
+    # HNi: 4.5
+    # C_a: 3.2
 
-    calc = RemappedTwoBodySingleSpecies(parameters=parameters, files=files)
+
+    parameters = {
+        'cutoff_radius': 3.2
+    }
+
+    calc = RemappedTwoBodySingleSpecies(parameters=parameters)
 
     a0 = 3.93
     b0 = a0 / 2.0
