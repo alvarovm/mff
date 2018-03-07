@@ -142,7 +142,7 @@ def sim_sq(a, b, sig, theta):  # squared similarity, used for debugging
                     C = np.exp(- (ris + rjs + rls + rms) / (4. * sig ** 2))
                     gamma_c = 1. / (2 * sig ** 2) * (np.dot(ri, rj) + np.dot(rl, rm))
                     gamma_s = 1. / (2 * sig ** 2) * (
-                                np.sqrt(ris * rjs) * np.sin(thetaij) + np.sqrt(rls * rms) * np.sin(thetalm))
+                            np.sqrt(ris * rjs) * np.sin(thetaij) + np.sqrt(rls * rms) * np.sin(thetalm))
                     gamma = np.sqrt(gamma_c ** 2 + gamma_s ** 2)
                     thetaijlm = np.arctan2(gamma_s, gamma_c)  # np.arctan2(gamma_s**2,gamma_c**2)
                     val = C * np.exp(gamma * np.cos(thetaijlm + theta))
@@ -680,7 +680,7 @@ def integr_LJs_mat_modegen(a, b, eps_mod, rm_mod, sig_eps, sig_rm):  # LJ with i
     outer = np.outer(amod, bmod)
     term24 = np.exp(24. * logr_m + 312. * sig_rm ** 2) / (outer ** 12)
     term18 = - np.exp(18. * logr_m + 180. * sig_rm ** 2) * (
-                1. / np.outer(amod ** 6, bmod ** 12) + 1. / np.outer(amod ** 12, bmod ** 6))
+            1. / np.outer(amod ** 6, bmod ** 12) + 1. / np.outer(amod ** 12, bmod ** 6))
     term12 = np.exp(12. * logr_m + 84. * sig_rm ** 2) / (outer ** 6)
     terms = (term24 + term18 + term12) / outer ** 2
     rrt = np.einsum("ia, jb -> iajb", a, b)
@@ -698,7 +698,7 @@ def integr_LJs_mat_meangen(a, b, rm_mean, eps_mean, sig_rm, sig_eps):  # LJ with
     outer = np.outer(amod, bmod)
     term24 = np.exp(24. * logr_m + 276. * sig_rm ** 2) / outer ** 12
     term18 = - np.exp(18. * logr_m + 153. * sig_rm ** 2) * (
-                1. / np.outer(amod ** 6, bmod ** 12) + 1. / np.outer(amod ** 12, bmod ** 6))
+            1. / np.outer(amod ** 6, bmod ** 12) + 1. / np.outer(amod ** 12, bmod ** 6))
     term12 = np.exp(12. * logr_m + 66. * sig_rm ** 2) / outer ** 6
     terms = (term24 + term18 + term12) / outer ** 2
     rrt = np.einsum("ia, jb -> iajb", a, b)
@@ -778,7 +778,7 @@ def m2_kSE(a, sig, theta):
     amod = np.sqrt((a ** 2).sum(1))
     sigsq, thetasq = sig * sig, theta * theta
     term = np.exp(-cdist(a, a, 'sqeuclidean') / (2 * (2 * sigsq + thetasq))) * thetasq / (
-                2 * sigsq + thetasq)  # *(r1 + r2)
+            2 * sigsq + thetasq)  # *(r1 + r2)
     r1pr2 = a[:, :, None] + a[:, :, None].T
     vec = np.einsum('ij, idj -> d', term, r1pr2)
     return vec
