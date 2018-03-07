@@ -59,7 +59,7 @@ def myker(a, b, sig):
             np.einsum('ijkl, jkab->ijklab', F2, outer) + \
             np.einsum('ijkl, ilab->ijklab', F3, outer) + \
             np.einsum('ijkl, jlab->ijklab', F4, outer)
-    
+
     # Double Derivative of the kernel on energy without cutoff
 
     simo = np.einsum('ijklab -> ab', EdAdB)
