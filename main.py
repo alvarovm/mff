@@ -1,10 +1,8 @@
-from m_ff.Configurations import Confs, Conf
-
 import numpy as np
-import create_MFF_database
 import create_MFF_grid
-import GP_for_MFF
+from original import GP_for_MFF
 import Kernels
+
 
 
 def create_MFF(filename, cutoff, nbodies=3, ntr=500, ntest=500, sigma=1.0, grid_start=1.5, grid_spacing=0.02):
