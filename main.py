@@ -4,7 +4,6 @@ from original import GP_for_MFF
 import Kernels
 
 
-
 def create_MFF(filename, cutoff, nbodies=3, ntr=500, ntest=500, sigma=1.0, grid_start=1.5, grid_spacing=0.02):
     # IMPORT XYZ AND CHOOSE PARAMETERS #
     if (nbodies == 3):
