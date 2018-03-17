@@ -8,7 +8,6 @@ class MLCalculator_local:
         self.nl = nl
         self.ff = ff
         self.ef = ef
-        self.gp = gp
 
     def get_potential_energy(self, atoms):
         n = len(atoms)

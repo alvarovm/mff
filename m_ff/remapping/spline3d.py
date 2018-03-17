@@ -119,10 +119,10 @@ class Spline3D(TriCubicSpline):
         phigrid = grid_energies[0, 0, :, 1]
 
         return cls(rgrid, rgrid, phigrid, three_energies)
-        
+
     @classmethod
     def from_matrix(cls, rs, energies):
-        energies = energies.reshape( len(rs), len(rs), len(rs) )
+        energies = energies.reshape(len(rs), len(rs), len(rs))
         return cls(rs, rs, rs, energies)
 
     @staticmethod

@@ -15,6 +15,10 @@ class Spline1D(InterpolatedUnivariateSpline):
 
         super(Spline1D, self).__init__(x0, f, k=3, ext=3)
 
+    def ev_all(self, x):
+        pass
+
+
     def ev_forces(self, rs):
         # Force as a function of a configuration
         ds = np.linalg.norm(rs, axis=1, keepdims=True)
@@ -32,17 +36,17 @@ class Spline1D(InterpolatedUnivariateSpline):
 
         energy_single = super(Spline1D, self).__call__(ds, nu=0)
 
-        tot_energy = np.sum(energy_single, axis = 0)
+        tot_energy = np.sum(energy_single, axis=0)
 
         return tot_energy
-        
+
     @classmethod
     def from_file(cls, filename):
         data = np.load(filename)
         x_range, energies = data[:, 0], data[:, 1]
 
         return cls(x_range, energies)
-        
+
     @classmethod
     def from_matrix(cls, rs, energies):
         return cls(rs, energies)
