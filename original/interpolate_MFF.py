@@ -78,8 +78,8 @@ class MBExp:
         if self.element2 == None:
             for c in np.arange(len(confs)):
                 rs = np.array((confs[c]))
-                energy_3 = self.tri_interp.ev_energy(rs)
-                energy_2 = self.pair_interp.ev_energy(rs)
+                energy_3 = self.tri_interp.ev_energy(rs, )
+                energy_2 = self.pair_interp.ev_energy(rs, )
                 energies[c] = energy_2 / 2.0 + energy_3 / 3.0
         else:
             print("Multi element interpolation not supported yet")

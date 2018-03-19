@@ -107,7 +107,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energ
             element_ind_count_prev[k] += count_el_atoms
 
         this_ind = np.concatenate(this_ind).ravel()
-
+        print(this_ind)
         # Call the carve_from_snapshot function on the chosen atoms
         if this_ind.size > 0:
             this_conf, this_force, this_energy = \
@@ -127,7 +127,7 @@ def carve_confs(atoms, r_cut, n_data, forces_label='forces', energy_label='energ
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.Er)
 
     r_cut = 3.7
     n_data = 3000

@@ -496,16 +496,6 @@ class ThreeBodyTwoSpecies(Calculator):
 if __name__ == '__main__':
     from ase import Atoms
 
-    # Usual cutoff values:
-    # Fe_vac: 4.5
-    # BIP_300: 100 (practically inf)
-    # HNi: 4.5
-    # C_a: 3.2
-
-    # parameters = {
-    #     'cutoff_radius': 3.2
-    # }
-
     logging.basicConfig(level=logging.INFO)
 
     a0 = 3.93

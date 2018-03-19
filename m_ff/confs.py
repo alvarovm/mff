@@ -1,4 +1,6 @@
+import logging
 from abc import ABCMeta
+from collections import Counter
 from ase.io import extxyz
 import numpy as np
 
@@ -12,37 +14,20 @@ from scipy import spatial
 from asap3 import FullNeighborList
 from ase.neighborlist import NeighborList
 
-import scipy.sparse as sp
+USE_ASAP = True
+logger = logging.getLogger(__name__)
 
 
-def get_confs_asap(atoms, r_cut):
-    # https://wiki.fysik.dtu.dk/asap/Neighbor%20lists
-
-    atomic_numbers = atoms.get_array('numbers', copy=False)
-    nl = FullNeighborList(r_cut, atoms=atoms)
-
-    for atom in atoms:
-        inds, confs, ds = nl.get_neighbors(atom.index)
-
-        yield atomic_numbers[inds], confs
-
-
-class ListOfConfs(object):
-    def __init__(self, confslist=[]):
-        self.confslist = confslist
-
-    def append(self, confs):
-        self.confslist.append(confs)
-
-    def __iter__(self):
-        for confs in self.confslist:
-            for conf in confs:
-                yield conf
+class MissingData(Exception):
+    pass
 
 
 class Configurations(metaclass=ABCMeta):
     """Configurations can represent a list of configurations"""
-    pass
+
+    def __init__(self, confs=None):
+        super().__init__()
+        self.confs = confs if confs else []
 
 
 class SingleSpecies(metaclass=ABCMeta):
@@ -54,174 +39,82 @@ class MultiSpecies(metaclass=ABCMeta):
 
 
 class Forces(metaclass=ABCMeta):
-    def __init__(self):
-        self._forces = None
-
-    @property
-    def forces(self):
-        return self._forces
-
-    @forces.setter
-    def forces(self, forces):
-        self._forces = forces
+    def __init__(self, forces=None):
+        self.forces = forces if forces else []
 
 
 class Energies(metaclass=ABCMeta):
-    def __init__(self):
-        self._energy = None
-
-    @property
-    def energy(self):
-        return self._energy
-
-    @energy.setter
-    def energy(self, energy):
-        self._energy = energy
+    def __init__(self, energy=None):
+        self.energy = energy if energy else []
 
 
 class ConfsSingleForces(Configurations, SingleSpecies, Forces):
-    def __init__(self, dist_matrix, forces):
+    def __init__(self, r_cut):
         super().__init__()
 
-        self.dist_matrix = dist_matrix
-        self.forces = forces
-
-    def __iter__(self):
-        return self
-
-    @classmethod
-    def from_atoms(cls, atoms, r_cut):
-        forces = atoms.get_array('force', copy=False)
-        nl = FullNeighborList(r_cut, atoms=atoms, driftfactor=0.)
-
-        # # dok sparse matrix implementation
-        # n_atoms = len(atoms)
-        # dist_matrix = sp.dok_matrix((n_atoms, n_atoms), dtype=np.float)
-        #
-        # for i in range(n_atoms):
-        #     indices, positions, distances = nl.get_neighbors(i)
-        #     dist_matrix[i, indices] = distances
-
-        # csr sparse matrix implementation
-        n_atoms = len(atoms)
-        data, row_ind, col_ind = [], [], []
-        for i in range(n_atoms):
-            indices, positions, distances = nl.get_neighbors(i)
-            row_ind += [i] * len(indices)
-            col_ind += indices.tolist()
-            data += distances.tolist()
-
-        dist_matrix = sp.csr_matrix((data, (row_ind, col_ind)), shape=(n_atoms, n_atoms))
-
-        return cls(dist_matrix, forces)
-
-
-class RemappingSingle(Configurations, SingleSpecies):
-
-    def __init__(self, atoms, r_cut):
-        self.nl = FullNeighborList(r_cut, atoms=atoms, driftfactor=0.)
-
-    def confs_for_1d(self):
-        return None
-
-
-class Confs(object):
-    def __init__(self, atomic_numbers, positions,
-                 forces=None,
-                 potential_energy=None):
-        """
-
-        Args:
-            atomic_numbers (ndarray):
-            positions (ndarray):
-            forces (ndarray):
-            potential_energy (float):
-        """
-
-        self.atomic_numbers = atomic_numbers
-        self.positions = positions
-        self.forces = forces
-        self.potential_energy = potential_energy
-
-    @classmethod
-    def from_atoms(cls, atoms, r_cut, index=None):
-        atomic_numbers = atoms.get_array('numbers', copy=False)
-        # positions = atoms.get_array('positions', copy=False)
-
-        confs = []
-        atomic_numbers = []
-        forces = []
-        for atomic_number, conf, force in cls.get_confs_cKDTree(atoms, r_cut):
-            atomic_numbers.append(atomic_number)
-            confs.append(conf)
-
-        return cls(atomic_numbers, confs)
-
-
-class Configuration(object):
-    """Class for representing a configuration
-    """
-
-    def __init__(self, atomic_number, positions, configurations=None):
-        """
-
-        Args:
-            number: atomic number
-        """
-        self.atomic_number = atomic_number
-        self.positions = np.array(positions, float)
-
-        self.configurtions = configurations
-        self._distances = None
-
-    @property
-    def distances(self):
-        if not self._distances:
-            self._distances = 0
-
-        return self._distances
-
-
-class ConfsForce(Configurations):
-    """Hello
-
-    Args:
-        r_cut:
-    """
-
-    def __init__(self, r_cut):
-        """test
-
-        Args:
-            r_cut:
-        """
         self.r_cut = r_cut
 
-        self.confs = None
-        self.forces = None
-        self.energies = None
+    def append(self, atoms, atom_inds=None, forces_label='force'):
+
+        if atom_inds is None:
+            atom_inds = range(len(atoms))
+
+        # See if there are forces and energies, get them for the chosen atoms
+        forces = atoms.arrays.get(forces_label)
+
+        if forces is None:
+            raise MissingData('Forces in the Atoms objects under {} label are not present.'.format(forces_label))
+
+        self.forces.append(forces[atom_inds])
+
+        # Build local configurations for every indexed atom
+        nl = FullNeighborList(self.r_cut, atoms=atoms)
+
+        for i in atom_inds:
+            indices, positions, distances = nl.get_neighbors(i)
+            self.confs.append(positions)
+
+
+class Sampling(object):
+    pass
+
+
+class SamplingSingle(Sampling):
+    pass
+
+
+class FairSamplingForces(Sampling):
+    def __init__(self, traj, n_data):
+        self.traj = traj
+        self.n_data = n_data
 
     def __iter__(self):
-        return self
 
-    def __next__(self):
-        return None
+        n_element = 0
+        for atoms in self.traj:
+            n_element += len(atoms)
 
-    @classmethod
-    def from_npy(cls):
-        pass
+        if self.n_data > n_element:
+            logger.warning('using all of them but ...')
 
-    @classmethod
-    def from_ase(cls, atoms, r_cut):
-        return cls(r_cut)
+        step_size = n_element // self.n_data
+        # # Get the atomic number of each atom in the trajectory file
+        # atom_number_list = [atoms.get_atomic_numbers() for atoms in traj]
+        # flat_atom_number = np.concatenate(atom_number_list)
+        # elements, elements_count = np.unique(flat_atom_number, return_counts=True)
 
-    @classmethod
-    def from_file(cls, filename, r_cut):
-        return cls(r_cut)
+        current_ind = 0
+        for atoms in self.traj:
+            n_local = len(atoms)
+            local_inds = range(current_ind, n_local, step_size)
+
+            yield atoms, list(local_inds)
+
+            current_ind = n_local - step_size * (len(local_inds) - 1)
 
 
 if __name__ == '__main__':
-    from ase.io import iread, read
+    from ase.io import read
 
     testfiles = {
         'BIP_300': '../test/data/BIP_300/movie.xyz',
@@ -231,12 +124,14 @@ if __name__ == '__main__':
     }
 
     filename = testfiles['Fe_vac']
-    atoms = read(filename, index=0)
+    traj = read(filename, index=slice(0, 2))
+    print(traj)
 
-    print(atoms)
+    confs = ConfsSingleForces(r_cut=4.5)
+    for atoms, atom_inds in FairSamplingForces(traj, n_data=30):
+        print(len(atoms), atom_inds)
 
-    confs = ConfsSingleForces.from_atoms(atoms, 4.5)
-    print(confs)
+        confs.append(atoms, atom_inds)
 
 # def carve_confs(filename, r_cut):
 #     ### Open file and get number of atoms and steps ###
@@ -463,9 +358,129 @@ if __name__ == '__main__':
 #
 #         # Testing (64k confs):
 #         # confs1 = list(get_confs(atoms, r_cut)) # 32 sec 1x
-#         # confs2 = list(get_confs_asap(atoms, r_cut)) # 2 sec 16x
-#         # confs3 = list(get_confs_cKDTree(atoms, r_cut)) # 0.6 sec 50x
+#         # confs2 = list(get_confs_asap(atoms, r_cut)) # 0.6 sec 50x
+#         # confs3 = list(get_confs_cKDTree(atoms, r_cut)) # 2 sec 16x
 #
 #         for conf, force in zip(get_confs_asap(atoms, r_cut), forces):
 #             confs_list.append(conf)
 #             force_list.append(force)
+# class Confs(object):
+#     def __init__(self, atomic_numbers, positions,
+#                  forces=None,
+#                  potential_energy=None):
+#         """
+#
+#         Args:
+#             atomic_numbers (ndarray):
+#             positions (ndarray):
+#             forces (ndarray):
+#             potential_energy (float):
+#         """
+#
+#         self.atomic_numbers = atomic_numbers
+#         self.positions = positions
+#         self.forces = forces
+#         self.potential_energy = potential_energy
+#
+#     @classmethod
+#     def from_atoms(cls, atoms, r_cut, index=None):
+#         atomic_numbers = atoms.get_array('numbers', copy=False)
+#         # positions = atoms.get_array('positions', copy=False)
+#
+#         confs = []
+#         atomic_numbers = []
+#         forces = []
+#         for atomic_number, conf, force in cls.get_confs_cKDTree(atoms, r_cut):
+#             atomic_numbers.append(atomic_number)
+#             confs.append(conf)
+#
+#         return cls(atomic_numbers, confs)
+#
+#
+# class Configuration(object):
+#     """Class for representing a configuration
+#     """
+#
+#     def __init__(self, atomic_number, positions, configurations=None):
+#         """
+#
+#         Args:
+#             number: atomic number
+#         """
+#         self.atomic_number = atomic_number
+#         self.positions = np.array(positions, float)
+#
+#         self.configurtions = configurations
+#         self._distances = None
+#
+#     @property
+#     def distances(self):
+#         if not self._distances:
+#             self._distances = 0
+#
+#         return self._distances
+#
+
+# class ConfsForce(Configurations):
+#     """Hello
+#
+#     Args:
+#         r_cut:
+#     """
+#
+#     def __init__(self, r_cut):
+#         """test
+#
+#         Args:
+#             r_cut:
+#         """
+#         self.r_cut = r_cut
+#
+#         self.confs = None
+#         self.forces = None
+#         self.energies = None
+#
+#     def __iter__(self):
+#         return self
+#
+#     def __next__(self):
+#         return None
+#
+#     @classmethod
+#     def from_npy(cls):
+#         pass
+#
+#     @classmethod
+#     def from_ase(cls, atoms, r_cut):
+#         return cls(r_cut)
+#
+#     @classmethod
+#     def from_file(cls, filename, r_cut):
+#         return cls(r_cut)
+
+
+# @classmethod
+# def from_atoms(cls, atoms, r_cut):
+#     forces = atoms.get_array('force', copy=False)
+#     nl = FullNeighborList(r_cut, atoms=atoms, driftfactor=0.)
+#
+#     # # dok sparse matrix implementation
+#     # n_atoms = len(atoms)
+#     # dist_matrix = sp.dok_matrix((n_atoms, n_atoms), dtype=np.float)
+#     #
+#     # for i in range(n_atoms):
+#     #     indices, positions, distances = nl.get_neighbors(i)
+#     #     dist_matrix[i, indices] = distances
+#
+#     # csr sparse matrix implementation
+#     n_atoms = len(atoms)
+#     data, row_ind, col_ind = [], [], []
+#     for i in range(n_atoms):
+#         indices, positions, distances = nl.get_neighbors(i)
+#         row_ind += [i] * len(indices)
+#         col_ind += indices.tolist()
+#         data += distances.tolist()
+#
+#     dist_matrix = sp.csr_matrix((data, (row_ind, col_ind)), shape=(n_atoms, n_atoms))
+#
+#     return cls(dist_matrix, forces)

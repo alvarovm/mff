@@ -10,4 +10,5 @@ setup(
     packages=['m_ff'],
     # install_requires=['scipy', 'numpy', 'future'],
     ext_modules=[tricub],
+    requires=['numpy']
 )
